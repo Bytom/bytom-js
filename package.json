@@ -4,9 +4,11 @@
   "description": "bytom client libraries for Javascript",
   "scripts": {
     "test": "mocha",
-    "only-test": "mocha --inspect-brk test/block.js"
+    "only-test": "mocha --inspect-brk test",
+    "build": "browserify  --require ./index.js:bytomjs-lib -o bytomjs-lib.js"
   },
   "devDependencies": {
+    "browserify": "^16.5.0",
     "chai": "^4.2.0",
     "mocha": "^6.2.2",
     "tape": "~2.12.3"

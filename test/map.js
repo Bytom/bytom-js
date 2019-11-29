@@ -1,12 +1,9 @@
-let Transaction = require('../lib/transaction/transaction.js')
 let Input = require('../lib/transaction/input.js')
 const Output = require('../lib/transaction/output.js')
-const BufferReader = require('../lib/binary/reader.js')
 let {mapTx} = require('../lib/transaction/map.js')
 const  BTMAssetID  = require('../lib/util/constance').BTMAssetID
 let bcIssuance = require('../lib/bc/issurance.js')
 let bcSpend = require('../lib/bc/spend.js')
-let bcCoinbase = require('../lib/bc/coinbase.js')
 
 let _ = require('lodash');
 

@@ -2,7 +2,6 @@
 /* jshint latedef: false */
 let should = require("chai").should();
 let expect = require("chai").expect;
-let _ = require("lodash");
 
 const BufferReader = require('../lib/binary/reader.js')
 const Output = require('../lib/transaction/output.js')
