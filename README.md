@@ -1,5 +1,6 @@
 Bytom Library
 =======
+[![NPM Package](https://img.shields.io/npm/v/bytomjs-lib.svg?style=flat-square)](https://www.npmjs.com/package/bytomjs-lib)
 
 A pure and powerful JavaScript Bytom library.
 
