@@ -22,7 +22,7 @@ bytom.binary.BufferReader = require('./lib/binary/reader');
 bytom.binary.BufferWriter = require('./lib/binary/writer');
 bytom.binary.Varint = require('./lib/binary/varInt');
 
-// main bitcoin library
+// main bytom library
 bytom.Block = require('./lib/block');
 bytom.BlockHeader = require('./lib/blockheader');
 bytom.BlockCommitment = require('./lib/blockcommitment');
