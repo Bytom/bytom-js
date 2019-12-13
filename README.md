@@ -25,7 +25,7 @@ Sign Transactions,
 let Bytom = require("bytomjs-lib")
 const BN = Bytom.BN
 
-let tx = new Bytom.bc.bcTx({
+let tx = new Bytom.bc.Tx({
                    id: Buffer.concat([new BN('13464118406972499748').toBuffer('be',8),new BN('5083224803004805715').toBuffer('be',8), new BN('16263625389659454272').toBuffer('be',8), new BN('9428032044180324575').toBuffer('be',8)],32),
                    inputIDs: [
                      Buffer.concat([new BN('14760873410800997144').toBuffer('be',8),new BN('1698395500822741684').toBuffer('be',8), new BN('5965908492734661392').toBuffer('be',8), new BN('9445539829830863994').toBuffer('be',8)],32)
