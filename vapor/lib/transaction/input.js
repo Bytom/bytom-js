@@ -3,11 +3,17 @@ let BufferWriter = require('../../../lib/binary/writer.js');
 let IssuanceInput = require('./issuanceInput.js')
 let SpendInput = require('./spendInput.js')
 let CoinbaseInput = require('./coinbaseInput.js')
+let CrossChainInput = require('./crosschainInput.js')
 let SpendCommitment = require('./spendcommitment.js')
 
-const IssuanceInputType = '00'
+// const IssuanceInputType = '00'
+// const SpendInputType = '01'
+// const CoinbaseInputType = '02'
+
+const CrossChainInputType = '00'
 const SpendInputType = '01'
 const CoinbaseInputType = '02'
+const VetoInputType = '03'
 
 let BN = require('bn.js');
 let {convertBNtoN} = require('../../../lib/util/convert')
@@ -249,5 +255,28 @@ Input.newCoinbaseInput = function(arbitrary) {
     typedInput:   new CoinbaseInput({arbitrary: arbitrary}),
   })
 }
+
+Input.newCrossChainInput= function(arguments, sourceID, assetID, amount, sourcePos, issuanceVMVersion, assetDefinition, issuanceProgram ) {
+  let sc = new SpendCommitment({
+    assetAmount: {
+      assetID: assetID,
+      amount:  amount,
+    },
+      sourceID:       sourceID,
+      sourcePosition: sourcePos,
+      vmVersion:      new BN(1)
+  })
+  return new Input({
+    assetVersion: 1,
+    typedInput: new CrossChainInput({
+      spendCommitment:   sc,
+      arguments:         arguments,
+      assetDefinition:   assetDefinition,
+      issuanceVMVersion: issuanceVMVersion,
+      issuanceProgram:   issuanceProgram,
+    })
+  })
+}
+
 
 module.exports = Input;
