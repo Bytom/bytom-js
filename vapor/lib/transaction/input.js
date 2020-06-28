@@ -1,14 +1,10 @@
 let _ = require('lodash');
 let BufferWriter = require('../../../lib/binary/writer.js');
-let IssuanceInput = require('./issuanceInput.js')
 let SpendInput = require('./spendInput.js')
 let CoinbaseInput = require('./coinbaseInput.js')
 let CrossChainInput = require('./crosschainInput.js')
 let SpendCommitment = require('./spendcommitment.js')
-
-// const IssuanceInputType = '00'
-// const SpendInputType = '01'
-// const CoinbaseInputType = '02'
+let VetoInput = require('./vetoInput.js')
 
 const CrossChainInputType = '00'
 const SpendInputType = '01'
@@ -55,13 +51,11 @@ Input.prototype.toObject = Input.prototype.toJSON = function toObject() {
 
 Input.prototype.assetAmount = function(){
   let inp = this.typedInput
-  if(inp instanceof IssuanceInput) {
-    let assetID = inp.assetID()
-    return {
-      assetID,
-      amount: inp.amount,
-    }
-  }else if( inp instanceof SpendInput){
+  if( inp instanceof SpendInput){
+    return inp.spendCommitment.assetAmount
+  }else if( inp instanceof CrossChainInput){
+    return inp.spendCommitment.assetAmount
+  }else if( inp instanceof VetoInput){
     return inp.spendCommitment.assetAmount
   }
   return {}
@@ -69,21 +63,24 @@ Input.prototype.assetAmount = function(){
 
 Input.prototype.assetID = function() {
   let inp = this.typedInput
-  if(inp instanceof IssuanceInput) {
-    return inp.assetID()
+  if( inp instanceof SpendInput){
+    return inp.spendCommitment.assetAmount.assetID
+  }else if( inp instanceof CrossChainInput){
+    return inp.spendCommitment.assetAmount.assetID
+  }else if( inp instanceof VetoInput){
+    return inp.spendCommitment.assetAmount.assetID
   }
-  else if( inp instanceof SpendInput){
-    return inp.spendCommitment.assetId
-  }
-  return {}
+  return ''
 }
 
 Input.prototype.amount = function(){
   let inp = this.typedInput
-  if(inp instanceof IssuanceInput) {
-    return inp.amount
-  }else if( inp instanceof SpendInput){
-    return inp.spendCommitment.amount
+  if(inp instanceof SpendInput) {
+    return inp.spendCommitment.assetAmount.amount
+  }else if( inp instanceof CrossChainInput){
+    return inp.spendCommitment.assetAmount.amount
+  }else if( inp instanceof VetoInput){
+    return inp.spendCommitment.assetAmount.amount
   }
   return 0
 }
@@ -99,18 +96,6 @@ Input.readFrom = function(br) {
     }
     let icType = reader.read(1).toString('hex')
     switch (icType) {
-      case IssuanceInputType:{
-        let nonce = reader.readVarstr31();
-        assetID = reader.read(32);
-        let amount = new BN(reader.readVarint63());
-        let ii = new IssuanceInput({
-          nonce:           nonce,
-          amount:          amount
-        })
-        input.typedInput = ii
-
-        break
-      }
       case SpendInputType:{
         let spendCommitment ={
           assetAmount:{}
@@ -131,6 +116,39 @@ Input.readFrom = function(br) {
         input.typedInput = ci
         break
       }
+      case CrossChainInputType:{
+        let spendCommitment ={
+          assetAmount:{}
+        }
+        let spendCommitmentSuffix = SpendCommitment.readFrom(reader, 1, spendCommitment);
+        let issuanceVMVersion = reader.readVarint63();
+        let assetDefinition = reader.readVarstr31();
+        let issuanceProgram = reader.readVarstr31();
+        let ci = new CrossChainInput({
+          spendCommitmentSuffix,
+          spendCommitment: new SpendCommitment(spendCommitment),
+          issuanceVMVersion,
+          assetDefinition,
+          issuanceProgram
+        })
+        input.typedInput = ci
+        break
+      }
+      case VetoInputType:{
+        let spendCommitment ={
+          assetAmount:{}
+        }
+        let vetoCommitmentSuffix = SpendCommitment.readFrom(reader, 1, spendCommitment);
+        let vote = reader.readVarstr31();
+
+        let vi = new VetoInput({
+          vetoCommitmentSuffix,
+          spendCommitment: new SpendCommitment(spendCommitment),
+          vote
+        })
+        input.typedInput = vi
+        break
+      }
       default:
         return new Error("unsupported input type " + icType)
     }
@@ -143,15 +161,11 @@ Input.readFrom = function(br) {
     }
 
     let inp = input.typedInput
-    if(inp instanceof IssuanceInput) {
-      inp.assetDefinition = reader.readVarstr31();
-      inp.vmVersion = new BN(reader.readVarint63());
-      inp.issuanceProgram = reader.readVarstr31();
-      if (!_.isEqual(inp.assetID(), assetID.toString('hex'))) {
-        throw Error('Bad AssetID')
-      }
+    if(inp instanceof SpendInput){
       inp.arguments = reader.readVarstrList();
-    }else if(inp instanceof SpendInput){
+    }else if(inp instanceof CrossChainInput){
+      inp.arguments = reader.readVarstrList();
+    }else if(inp instanceof VetoInput){
       inp.arguments = reader.readVarstrList();
     }
       return undefined
@@ -182,18 +196,22 @@ Input.prototype.writeInputCommitment = function(w) {
   }
 
   let inp = this.typedInput
-  if (inp instanceof IssuanceInput) {
-    w.write(new Buffer(IssuanceInputType, 'hex'));
-    w.writeVarstr31(inp.nonce);
-    let assetID = inp.assetID()
-    w.write(new Buffer(assetID, 'hex'))
-    w.writeVarint63(inp.amount)
-  }else if (inp instanceof SpendInput){
+  if (inp instanceof SpendInput){
     w.write(new Buffer(SpendInputType, 'hex'))
     return inp.spendCommitment.writeExtensibleString(w, inp.spendCommitmentSuffix, this.assetVersion)
   }else if(inp instanceof CoinbaseInput){
     w.write(new Buffer(CoinbaseInputType, 'hex'));
     w.writeVarstr31(inp.arbitrary);
+  }else if (inp instanceof CrossChainInput){
+    w.write(new Buffer(CrossChainInputType, 'hex'))
+    inp.spendCommitment.writeExtensibleString(w, inp.spendCommitmentSuffix, this.assetVersion)
+    w.writeVarint63(inp.issuanceVMVersion)
+    w.writeVarstr31(inp.assetDefinition);
+    w.writeVarstr31(inp.issuanceProgram);
+  }else if (inp instanceof VetoInput){
+    w.write(new Buffer(VetoInputType, 'hex'))
+    inp.spendCommitment.writeExtensibleString(w, inp.spendCommitmentSuffix, this.assetVersion)
+    w.writeVarstr31(inp.vote);
   }
 
   return w
@@ -204,30 +222,16 @@ Input.prototype.writeInputWitness = function(w){
     return null
   }
   let inp = this.typedInput
-  if (inp instanceof IssuanceInput) {
-    w.writeVarstr31(inp.assetDefinition)
-    w.writeVarint63(inp.vmVersion)
-    w.writeVarstr31(inp.issuanceProgram)
+  if(inp instanceof SpendInput){
     w.writeVarstrList(inp.arguments)
-  }else if(inp instanceof SpendInput){
+  }else if(inp instanceof CrossChainInput){
+    w.writeVarstrList(inp.arguments)
+  }else if(inp instanceof VetoInput){
     w.writeVarstrList(inp.arguments)
   }
   return w
 }
 
-Input.newIssuanceInput = function(nonce, amount, issuanceProgram, args, assetDefinition) {
-  return new Input({
-    assetVersion: 1,
-    typedInput: new IssuanceInput({
-      nonce:           nonce,
-      amount:          amount,
-      assetDefinition: assetDefinition,
-      vmVersion:       new BN(1),
-      issuanceProgram: issuanceProgram,
-      arguments:       args,
-    })
-  })
-}
 
 Input.newSpendInput = function(args, sourceID, assetID , amount, sourcePos, controlProgram) {
   let sc = new SpendCommitment({
@@ -275,6 +279,27 @@ Input.newCrossChainInput= function(arguments, sourceID, assetID, amount, sourceP
       issuanceVMVersion: issuanceVMVersion,
       issuanceProgram:   issuanceProgram,
     })
+  })
+}
+
+Input.newVetoInput = function(args, sourceID, assetID , amount, sourcePos, controlProgram, vote) {
+  let sc = new SpendCommitment({
+    assetAmount: {
+      assetID: assetID,
+      amount:  amount,
+    },
+    sourceID:       sourceID,
+    sourcePosition: sourcePos,
+    vmVersion:      new BN(1),
+    controlProgram: controlProgram,
+  })
+  return new Input({
+    assetVersion: 1,
+    typedInput: new SpendInput({
+      spendCommitment: sc,
+      arguments:       args,
+      vote:            vote,
+    }),
   })
 }
 
