@@ -11,8 +11,8 @@ function blockHeader(args) {
   this.timestamp = info.timestamp
   this.transactionsRoot = info.transactionsRoot
   this.transactionStatusHash = info.transactionStatusHash
-  this.bits = info.bits
-  this.nonce = info.nonce
+  this.transactionStatus = info.transactionStatus
+  this.witnessArguments = info.witnessArguments
 
   return this;
 }
@@ -28,22 +28,19 @@ blockHeader.prototype.writeForHash = function(w) {
   Entry.writeForHash(w, this.timestamp)
   Entry.writeForHash(w, this.transactionsRoot)
   Entry.writeForHash(w, this.transactionStatusHash)
-  Entry.writeForHash(w, this.bits)
-  Entry.writeForHash(w, this.nonce)
 }
 
 // NewblockHeader creates a new blockHeader.
-blockHeader.newblockHeader = function(version, height, previousBlockId, timestamp, transactionsRoot, transactionStatusHash, nonce, bits) {
-
+blockHeader.newblockHeader = function(version, height, previousBlockId, timestamp, transactionsRoot, transactionStatusHash, witness) {
   return new blockHeader({
     version: version,
     height: height,
     previousBlockId: previousBlockId,
     timestamp: timestamp,
-    transactionsRoot: transactionsRoot,
+    transactionsRoot:      transactionsRoot,
     transactionStatusHash: transactionStatusHash,
-    nonce: nonce,
-    bits: bits
+    transactionStatus:     null,
+    witnessArguments:      witness,
   })
 }
 

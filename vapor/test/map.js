@@ -2,7 +2,6 @@ let Input = require('../lib/transaction/input.js')
 const Output = require('../lib/transaction/output.js')
 let {mapTx} = require('../lib/transaction/map.js')
 const  BTMAssetID  = require('../../lib/util/constance').BTMAssetID
-let bcIssuance = require('../lib/bc/issurance.js')
 let bcSpend = require('../lib/bc/spend.js')
 
 let _ = require('lodash');
@@ -20,26 +19,8 @@ describe('Map', function() {
         Input.newSpendInput(null, "fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409", BTMAssetID, 88, 3, Buffer.from([1])),
       ],
       outputs: [
-        Output.newTxOutput(BTMAssetID, 80, Buffer.from[1]),
+        Output.newIntraChainOutput(BTMAssetID, 80, Buffer.from[1]),
       ]
-    },
-    {
-      inputs: [
-        Input.newIssuanceInput(new Buffer("nonce",'hex'), 254354, new Buffer("issuanceProgram", 'hex'), [new Buffer("arguments1","hex"), new Buffer("arguments2", 'hex')], new Buffer("assetDefinition", "hex")),
-      ],
-      outputs: [
-        Output.newTxOutput(BTMAssetID, 80,Buffer.from[1]),
-      ],
-    },
-    {
-      inputs: [
-        Input.newIssuanceInput(new Buffer("nonce", 'hex'), 254354, new Buffer("issuanceProgram", 'hex'), [new Buffer("arguments1", 'hex'), new Buffer("arguments2", 'hex')], new Buffer("assetDefinition", 'hex')),
-        Input.newSpendInput(null, "db7b16ac737440d6e38559996ddabb207d7ce84fbd6f3bfd2525d234761dc863", BTMAssetID, 88, 3, Buffer.from[1]),
-      ],
-      outputs:[
-        Output.newTxOutput(BTMAssetID, 80, Buffer.from[1]),
-        Output.newTxOutput(BTMAssetID, 80, Buffer.from[1]),
-      ],
     }
   ]
 
@@ -48,7 +29,7 @@ describe('Map', function() {
       Input.newCoinbaseInput(new Buffer("TestMapCoinbaseTx")),
     ],
     outputs: [
-      Output.newTxOutput(BTMAssetID, 800000000000, Buffer.from[1]),
+      Output.newIntraChainOutput(BTMAssetID, 800000000000, Buffer.from[1]),
     ]
   }
   it('TestMapSpendTx', function () {
@@ -63,12 +44,8 @@ describe('Map', function() {
         let resultEntry = tx.entries[tx.inputIDs[i]]
 
         expect(resultEntry).not.to.be.undefined;
-        if (resultEntry instanceof bcIssuance) {
-          expect(resultEntry.value.assetID ).to.equal(oldIn.assetID())
-          expect(resultEntry.value.amount).to.equal(oldIn.amount())
-        }
-        else if (resultEntry instanceof bcSpend) {
-          let spendOut = tx.output(resultEntry.spentOutputId);
+        if (resultEntry instanceof bcSpend) {
+          let spendOut = tx.entries[resultEntry.spentOutputId];
           expect(spendOut.source.value).to.equal(oldIn.assetAmount())
         } else {
           throw Error("unexpect input type")
@@ -76,7 +53,7 @@ describe('Map', function() {
       }
 
       for(let i = 0; i< txData.outputs.length; i++) {
-        let oldOut = txData.outputs[i]
+        let oldOut = txData.outputs[i].typedOutput
         let newOut =tx.entries[resultIds[i]];
 
         expect(newOut).not.to.be.undefined;
@@ -90,7 +67,7 @@ describe('Map', function() {
   });
 
   it('TestMapCoinbaseTx', function () {
-    let oldOut = txData.outputs[0]
+    let oldOut = txData.outputs[0].typedOutput
 
     let tx = mapTx(txData)
     let resultIds = tx.entries[_.findKey(tx.entries, 'resultIDs')].resultIDs

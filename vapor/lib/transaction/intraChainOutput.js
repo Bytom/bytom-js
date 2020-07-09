@@ -1,4 +1,5 @@
 // https://github.com/Bytom/vapor/blob/master/protocol/bc/types/intrachain_output.go
+const IntraChainOutputType = '00'
 
 let IntraChainOutput = function IntraChainOutput(arg) {
   if (!(this instanceof IntraChainOutput)) {
@@ -17,6 +18,10 @@ IntraChainOutput.prototype.toObject = IntraChainOutput.prototype.toJSON = functi
     commitmentSuffix : this.commitmentSuffix
   };
   return obj;
+};
+
+IntraChainOutput.prototype.outputType = function() {
+  return IntraChainOutputType;
 };
 
 module.exports = IntraChainOutput;

@@ -8,7 +8,9 @@ let BufferWriter = require('../../../lib/binary/writer');
 let OutputCommitment = require('./outputcommitment.js')
 let CrossChainOutput = require('./crosschainOutput.js')
 let IntraChainOutput = require('./intraChainOutput.js')
+let BcIntraChainOutput = require('../bc/intraChainOutput.js')
 let VoteOutput = require('./voteOutput')
+let BcVoteOutput = require('../bc/voteOutput')
 let Entry = require('../bc/entry.js')
 
 
@@ -33,10 +35,10 @@ function Output(args) {
 
 }
 
-Output.newCrossChainOutput = function(assetID, amount, controlProgram ){
+Output.newCrossChainOutput = function (assetID, amount, controlProgram) {
   return new Output({
-      assetVersion: 1,
-      typedOutput: new CrossChainOutput({
+    assetVersion: 1,
+    typedOutput: new CrossChainOutput({
       outputCommitment: OutputCommitment({
         assetAmount: {
           assetID: new Buffer(assetID, 'hex'),
@@ -49,56 +51,89 @@ Output.newCrossChainOutput = function(assetID, amount, controlProgram ){
   })
 }
 
-Output.prototype.outputCommitment = function() {
+Output.newIntraChainOutput = function (assetID, amount, controlProgram) {
+  return new Output({
+    assetVersion: 1,
+    typedOutput: new IntraChainOutput({
+      outputCommitment: OutputCommitment({
+        assetAmount: {
+          assetID: new Buffer(assetID, 'hex'),
+          amount: amount
+        },
+        vmVersion: new BN(1),
+        controlProgram
+      })
+    })
+  })
+}
+
+Output.newVoteOutput = function (assetID, amount, controlProgram, vote) {
+  return new Output({
+    assetVersion: 1,
+    typedOutput: new VoteOutput({
+      outputCommitment: OutputCommitment({
+        assetAmount: {
+          assetID: new Buffer(assetID, 'hex'),
+          amount: amount
+        },
+        vmVersion: new BN(1),
+        controlProgram
+      }),
+      vote
+    })
+  })
+}
+
+Output.prototype.outputCommitment = function () {
   let outp = this.typedOutput
 
-  if(outp instanceof IntraChainOutput) {
+  if (outp instanceof IntraChainOutput) {
     return outp.outputCommitment
-  }else if( outp instanceof CrossChainOutput){
+  } else if (outp instanceof CrossChainOutput) {
     return outp.outputCommitment
-  }else if( outp instanceof VoteOutput){
+  } else if (outp instanceof VoteOutput) {
     return outp.outputCommitment
   }
   return new OutputCommitment()
 }
 
-Output.prototype.assetAmount = function(){
+Output.prototype.assetAmount = function () {
   let outp = this.typedOutput
-  if(outp instanceof IntraChainOutput) {
+  if (outp instanceof IntraChainOutput) {
     return outp.assetAmount
-  }else if( outp instanceof CrossChainOutput){
+  } else if (outp instanceof CrossChainOutput) {
     return outp.assetAmount
-  }else if( outp instanceof VoteOutput){
+  } else if (outp instanceof VoteOutput) {
     return outp.assetAmount
   }
   return {}
 }
 
-Output.prototype.controlProgram = function(){
+Output.prototype.controlProgram = function () {
   let outp = this.typedOutput
-  if(outp instanceof IntraChainOutput) {
+  if (outp instanceof IntraChainOutput) {
     return outp.controlProgram
-  }else if( outp instanceof CrossChainOutput){
+  } else if (outp instanceof CrossChainOutput) {
     return outp.controlProgram
-  }else if( outp instanceof VoteOutput){
+  } else if (outp instanceof VoteOutput) {
     return outp.controlProgram
   }
   return ''
 }
 
-Output.prototype.vmVersion = function(){
+Output.prototype.vmVersion = function () {
   let outp = this.typedOutput
-  if(outp instanceof IntraChainOutput) {
+  if (outp instanceof IntraChainOutput) {
     return outp.vmVersion
-  }else if( outp instanceof CrossChainOutput){
+  } else if (outp instanceof CrossChainOutput) {
     return outp.vmVersion
-  }else if( outp instanceof VoteOutput){
+  } else if (outp instanceof VoteOutput) {
     return outp.vmVersion
   }
   return 0
 }
 
-Output.fromObject = function(data) {
+Output.fromObject = function (data) {
   return new Output(data);
 };
 
@@ -112,37 +147,37 @@ Output.prototype.toObject = Output.prototype.toJSON = function toObject() {
 };
 
 
-Output.readFrom = function(br) {
-  let output = new Output();
+Output.readFrom = function (br) {
+  let output = new Output({});
   output.assetVersion = Number(br.readVarint63());
 
-  let assetID
-  output.commitmentSuffix = br.readExtensibleString(function(reader) {
+  output.commitmentSuffix = br.readExtensibleString(function (reader) {
     if (output.assetVersion != 1) {
       return undefined
     }
     let outType = reader.read(1).toString('hex')
     switch (outType) {
-      case IntraChainOutputType:{
-        let out = new IntraChainOutput();
-        out.commitmentSuffix = OutputCommitment.readFrom(br, output)
+      case IntraChainOutputType: {
+        const commitmentSuffix = OutputCommitment.readFrom(reader, output)
+        output.typedOutput.commitmentSuffix = commitmentSuffix
+        output.typedOutput = new IntraChainOutput(output.typedOutput);
 
-        output.typedOutput = out
         break
       }
-      case CrossChainOutputType:{
-        let out = new CrossChainOutput();
-        out.commitmentSuffix = OutputCommitment.readFrom(br, output)
+      case CrossChainOutputType: {
+        const commitmentSuffix = OutputCommitment.readFrom(reader, output)
+        output.typedOutput.commitmentSuffix = commitmentSuffix
+        output.typedOutput = new CrossChainOutput(output.typedOutput);
 
-        output.typedOutput = out
         break
       }
-      case VoteOutputType:{
-        let out = new VoteOutput();
-        out.vote =  Number(br.readVarint63());
-        out.commitmentSuffix = OutputCommitment.readFrom(br, output)
+      case VoteOutputType: {
+        const vote =  reader.readVarstr31();
+        const commitmentSuffix = OutputCommitment.readFrom(reader, output);
+        output.typedOutput.commitmentSuffix = commitmentSuffix;
+        output.typedOutput.vote = vote;
+        output.typedOutput = new VoteOutput(output.typedOutput);
 
-        output.typedOutput = out
         break
       }
       default:
@@ -155,18 +190,19 @@ Output.readFrom = function(br) {
   return output;
 };
 
-Output.prototype.writeTo = function(writer) {
+Output.prototype.writeTo = function (writer) {
   if (!writer) {
     writer = new BufferWriter();
   }
   writer.writeVarint63(this.assetVersion);
-  this.outputCommitment.writeExtensibleString(writer, this.commitmentSuffix, this.writeOutputCommitment)
+  const w = new BufferWriter()
+  writer.writeExtensibleString(this.commitmentSuffix, this.writeOutputCommitment(w));
   writer.writeVarstr31('')
   return writer;
 };
 
 
-Output.prototype.writeOutputCommitment = function(w) {
+Output.prototype.writeOutputCommitment = function (w) {
   if (this.assetVersion != 1) {
     return null
   }
@@ -175,10 +211,10 @@ Output.prototype.writeOutputCommitment = function(w) {
   if (outp instanceof IntraChainOutput) {
     w.write(new Buffer(IntraChainOutputType, 'hex'));
     return outp.outputCommitment.writeExtensibleString(w, outp.spendCommitmentSuffix, this.assetVersion)
-  }else if(outp instanceof CrossChainOutput) {
+  } else if (outp instanceof CrossChainOutput) {
     w.write(new Buffer(CrossChainOutputType, 'hex'));
     return outp.outputCommitment.writeExtensibleString(w, outp.spendCommitmentSuffix, this.assetVersion)
-  }else if(outp instanceof VoteOutput) {
+  } else if (outp instanceof VoteOutput) {
     w.write(new Buffer(VoteOutputType, 'hex'));
     w.writeVarstr31(outp.vote);
     return outp.outputCommitment.writeExtensibleString(w, outp.spendCommitmentSuffix, this.assetVersion)
@@ -187,25 +223,27 @@ Output.prototype.writeOutputCommitment = function(w) {
   return w
 }
 
-Output.computeOutputID = function(sc, inputType, vote)  {
+Output.computeOutputID = function (sc, inputType, vote) {
+
+
   let src = {
-    ref:      sc.sourceID,
-    value:    sc.assetAmount,
+    ref: sc.sourceID,
+    value: sc.assetAmount,
     position: sc.sourcePosition,
   }
   let o
   switch (inputType) {
     case SpendInputType:
-      o = IntraChainOutput.newIntraChainOutput(src, {vmVersion: sc.vmVersion, code: sc.controlProgram}, 0);
+      o = BcIntraChainOutput.newIntraChainOutput(src, {vmVersion: sc.vmVersion, code: sc.controlProgram}, 0);
       break;
     case VetoInputType:
-      o = VoteOutput.newVoteOutput(src, {vmVersion: sc.vmVersion, code: sc.controlProgram}, 0, vote)
+      o = BcVoteOutput.newVoteOutput(src, {vmVersion: sc.vmVersion, code: sc.controlProgram}, 0, vote)
       break;
     default:
       return new Error("Input type error:" + inputType)
   }
 
-  let h = Entry.entryID((o)
+  let h = Entry.entryID(o)
   return h
 }
 

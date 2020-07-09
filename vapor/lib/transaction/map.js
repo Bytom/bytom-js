@@ -1,14 +1,15 @@
-let BufferWriter = require('../../../lib/binary/writer.js');
 let Entry = require('../bc/entry.js')
-let IssuanceInput = require('./issuanceInput.js')
 let SpendInput = require('./spendInput.js')
 let CoinbaseInput = require('./coinbaseInput.js')
-let Input = require('./input.js')
-let Output = require('./output.js')
-let bcIssuance = require('../bc/issurance.js')
+let VetoInput = require('./vetoInput.js')
+let CrossChainInput = require('./crosschainInput.js')
 let bcSpend = require('../bc/spend.js')
+let bcCrossChainInput = require('../bc/crosschainInput.js')
 let bcCoinbase = require('../bc/coinbase.js')
+let bcIntrachainOutput = require('../bc/intrachainOutput.js')
+let bcVetoInput = require('../bc/vetoInput.js')
 let bcOutput= require('../bc/output.js')
+let bcVoteOutput= require('../bc/voteOutput.js')
 let bcMux= require('../bc/mux.js')
 let bcRetirement= require('../bc/retirement.js')
 let bcTxHeader= require('../bc/txHeader.js')
@@ -20,6 +21,12 @@ const OP_FAIL = 0x6a
 const OP_TRUE = 0x51
 
 const BTMAssetID = require('../../../lib/util/constance.js').BTMAssetID
+const sha3_256 = require( "js-sha3").sha3_256
+
+const IntraChainOutputType = '00'
+const CrossChainOutputType = '01'
+const VoteOutputType = '02'
+
 // MapTx converts a types TxData object into its entries-based
 // representation.
 function mapTx(oldTx) {
@@ -34,16 +41,28 @@ function mapTx(oldTx) {
   }
 
   let spentOutputIDs = new Object()
+  let mainchainOutputIDs = new Object()
   for(let id in entries){
     const e = entries[id]
     let ord
 
-    if (e instanceof bcIssuance) {
-      ord = e.ordinal
-    }
-    else if (e instanceof bcSpend) {
+    if (e instanceof bcSpend) {
       ord = e.ordinal
       spentOutputIDs[e.spentOutputId] = true
+      if (e.witnessDestination.value.assetId == BTMAssetID) {
+        tx.gasInputIDs.push(id)
+      }
+    }
+    else if (e instanceof bcVetoInput) {
+      ord = e.ordinal
+      spentOutputIDs[e.spentOutputId] = true
+      if (e.witnessDestination.value.assetId == BTMAssetID) {
+        tx.gasInputIDs.push(id)
+      }
+    }
+    else if (e instanceof bcCrossChainInput) {
+      ord = e.ordinal
+      mainchainOutputIDs[e.mainchainOutputId] = true
       if (e.witnessDestination.value.assetId == BTMAssetID) {
         tx.gasInputIDs.push(id)
       }
@@ -55,14 +74,17 @@ function mapTx(oldTx) {
       continue
     }
 
-    if (ord >= (oldTx.inputs.length)) {
-      continue
+    if (ord < (oldTx.inputs.length)) {
+      tx.inputIDs[ord] = id
     }
-    tx.inputIDs[ord] = id
   }
 
   for(let id in spentOutputIDs) {
     tx.spentOutputIDs = tx.spentOutputIDs? tx.spentOutputIDs.push(id):[id]
+  }
+
+  for(let id in mainchainOutputIDs) {
+    tx.mainchainOutputIDs = tx.mainchainOutputIDs? tx.mainchainOutputIDs.push(id):[id]
   }
 
   return new bcTx(tx)
@@ -76,7 +98,7 @@ function _mapTx(tx) {
     return id
   }
 
-  let spends = [], issuances =[], coinbase
+  let spends = [], vetoInputs =[],crossIns =[], coinbase
 
 
   const inputLen = tx.inputs?tx.inputs.length:0
@@ -84,30 +106,7 @@ function _mapTx(tx) {
   for (let i = 0; i < inputLen ; i++) {
     const input = tx.inputs[i]
     let inp = input.typedInput
-    if(inp instanceof IssuanceInput) {
-      let nonceHash = new Buffer(inp.nonceHash())
-      let assetDefHash = new Buffer(inp.assetDefinitionHash())
-      let value = input.assetAmount()
-
-      let issuance = bcIssuance.newIssuance(nonceHash, value, new BN(i))
-      issuance.witnessAssetDefinition = {
-        data: assetDefHash,
-        issuanceProgram: {
-          vmVersion: inp.vmVersion,
-          code: inp.issuanceProgram,
-        },
-      }
-      issuance.witnessArguments = inp.arguments
-      let issuanceID = addEntry(issuance)
-
-      muxSources[i] = {
-        ref: issuanceID,
-        value: value,
-        position: new BN(0)
-      }
-
-      issuances.push(issuance)
-    } else if(inp instanceof SpendInput) {
+    if(inp instanceof SpendInput) {
       // create entry for prevout
       let prog = {vmVersion: inp.spendCommitment.vmVersion, code: inp.spendCommitment.controlProgram}
       let src = {
@@ -115,7 +114,7 @@ function _mapTx(tx) {
         value: inp.spendCommitment.assetAmount,
         position: inp.spendCommitment.sourcePosition,
       }
-      let prevout = bcOutput.newOutput(src, prog, 0) // ordinal doesn't matter for prevouts, only for result outputs
+      let prevout = bcIntrachainOutput.newIntraChainOutput(src, prog, 0) // ordinal doesn't matter for prevouts, only for result outputs
       let prevoutID = addEntry(prevout)
       // create entry for spend
       let spend = bcSpend.newSpend(prevoutID, new BN(i))
@@ -129,14 +128,74 @@ function _mapTx(tx) {
       }
 
       spends.push(spend)
+    }else if(inp instanceof VetoInput) {
+      // create entry for prevout
+      let prog = {vmVersion: inp.spendCommitment.vmVersion, code: inp.spendCommitment.controlProgram}
+      let src = {
+        ref: inp.spendCommitment.sourceID,
+        value: inp.spendCommitment.assetAmount,
+        position: inp.spendCommitment.sourcePosition,
+      }
+      let prevout = bcVoteOutput.newVoteOutput(src, prog, 0, inp.vote) // ordinal doesn't matter for prevouts, only for result outputs
+      let prevoutID = addEntry(prevout)
+
+
+      // create entry for VetoInput
+      let vetoInput = bcVetoInput.newVetoInput(prevoutID, new BN(i))
+      vetoInput.witnessArguments = inp.arguments
+      let vetoVoteID = addEntry(vetoInput)
+      // setup mux
+
+      muxSources[i] = {
+        ref: vetoVoteID,
+        value: inp.spendCommitment.assetAmount,
+        position: new BN(0)
+      }
+
+      vetoInputs.push(vetoInput)
+    }else if(inp instanceof CrossChainInput) {
+      // create entry for prevout
+      let prog = {vmVersion: inp.spendCommitment.vmVersion, code: inp.spendCommitment.controlProgram}
+      let src = {
+        ref: inp.spendCommitment.sourceID,
+        value: inp.spendCommitment.assetAmount,
+        position: inp.spendCommitment.sourcePosition,
+      }
+      let prevout = bcIntrachainOutput.newIntraChainOutput(src, prog, 0) // ordinal doesn't matter for prevouts, only for result outputs
+      let mainchainOutputID = addEntry(prevout)
+
+      let assetDefHash = sha3_256.array(Buffer.from(inp.assetDefinition,'hex'))
+      let assetDef = {
+          data: assetDefHash,
+          issuanceProgram: {
+            vmVersion: inp.issuanceVMVersion,
+            code:      inp.issuanceProgram,
+          },
+      }
+
+      let crossIn = bcCrossChainInput.newCrossChainInput(mainchainOutputID, prog, new BN(i), assetDef, inp.assetDefinition)
+      crossIn.witnessArguments = inp.arguments
+      let crossInID = addEntry(crossIn)
+      muxSources[i] ={
+        ref:   crossInID,
+        value: inp.spendCommitment.assetAmount,
+        position: new BN(0)
+      }
+      crossIns.push(crossIn)
     }else if(inp instanceof CoinbaseInput) {
       coinbase = bcCoinbase.newCoinbase(inp.arbitrary)
       let coinbaseID = addEntry(coinbase)
+      let totalAmount = new BN(0)
 
-      let out = tx.outputs[0]
+      for(let out of tx.outputs){
+        totalAmount  = totalAmount.add(new BN(out.typedOutput.outputCommitment.assetAmount.amount))
+      }
       muxSources[i] = {
         ref: coinbaseID,
-        value: out.outputCommitment.assetAmount,
+        value:{
+          AssetId: BTMAssetID,
+          Amount:  totalAmount,
+        },
         position: new BN(0)
       }
     }
@@ -151,8 +210,14 @@ function _mapTx(tx) {
     let spentOutput = entryMap[spend.spentOutputId]
     spend.setDestination(muxID, spentOutput.source.value, spend.ordinal)
   }
-  for (let issuance of issuances) {
-    issuance.setDestination(muxID, issuance.value, issuance.ordinal)
+
+  for (let vetoInput of vetoInputs ){
+    let voteOutput = entryMap[vetoInput.spentOutputId]
+    vetoInput.setDestination(muxID, voteOutput.source.value, vetoInput.ordinal)
+  }
+  for (let crossIn of crossIns) {
+    let mainchainOutputId = entryMap[crossIn.mainchainOutputId]
+    crossIn.setDestination(muxID, mainchainOutputId.source.value, crossIn.ordinal)
   }
 
   if (coinbase != null ){
@@ -164,22 +229,36 @@ function _mapTx(tx) {
   const outputLen = tx.outputs?tx.outputs.length:0
 
   for(let i = 0; i < outputLen; i++ ){
-    const out = tx.outputs[i]
+    const out = tx.outputs[i].typedOutput
     let src = {
       ref:      muxID,
         value:    out.outputCommitment.assetAmount,
         position: new BN(i),
     }
     let resultID
+
     if (_isUnspendable(out.outputCommitment.controlProgram)) {
       // retirement
       let r = bcRetirement.newRetirement(src, new BN(i))
       resultID = addEntry(r)
-    } else {
+    } else if( out.outputType() === IntraChainOutputType){
       // non-retirement
       let prog = { vmVersion:out.outputCommitment.vmVersion, controlProgram: out.outputCommitment.controlProgram}
-      let o = bcOutput.newOutput(src, prog, new BN(i))
+      let o = bcIntrachainOutput.newIntraChainOutput(src, prog, new BN(i))
       resultID = addEntry(o)
+    }else if( out.outputType() === CrossChainOutputType){
+      // non-retirement
+      let prog = { vmVersion:out.outputCommitment.vmVersion, controlProgram: out.outputCommitment.controlProgram}
+      let o = bcCrossChainInput.newCrossChainInput(src, prog, new BN(i))
+      resultID = addEntry(o)
+    }else if( out.outputType() === VoteOutputType){
+      // non-retirement
+      let voteOut = out.typedOutput
+      let prog = { vmVersion:out.outputCommitment.vmVersion, controlProgram: out.outputCommitment.controlProgram}
+      let o = bcVoteOutput.newVoteOutput(src, prog, new BN(i), voteOut.vote)
+      resultID = addEntry(o)
+    }else{
+      throw 'unknown outType.'
     }
 
     let dest = {
@@ -199,8 +278,8 @@ function _isUnspendable(prog)  {
   return prog && prog.length > 0 && prog[0] == OP_FAIL
 }
 
-function mapBlockHeader(oldBlockHeader) {
-  let bh = bcBlockHeader.newblockHeader(oldBlockHeader.version, oldBlockHeader.height, oldBlockHeader.previousBlockHash, oldBlockHeader.timestamp, oldBlockHeader.blockCommitment.transactionsMerkleRoot, oldBlockHeader.blockCommitment.transactionStatusHash, oldBlockHeader.nonce, oldBlockHeader.bits)
+function mapBlockHeader(old) {
+  let bh = bcBlockHeader.newblockHeader(old.version, old.height, old.previousBlockHash, old.timestamp, old.transactionsMerkleRoot, old.transactionStatusHash, old.witness)
   return {entryID: Entry.entryID(bh), blockheader: bh}
 }
 

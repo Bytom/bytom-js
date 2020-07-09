@@ -4,6 +4,7 @@ let BufferReader = require('../../lib/binary/reader')
 let BufferWriter = require('../../lib/binary/writer')
 
 const BlockCommitment = require('./blockcommitment.js')
+const BlockWitness = require('./blockWitness.js')
 let {mapBlockHeader} = require('../lib/transaction/map.js')
 
 let {convertBNtoN} = require('../../lib/util/convert')
@@ -28,9 +29,8 @@ let BlockHeader = function BlockHeader(arg) {
   this.height = info.height;
   this.previousBlockHash = info.previousBlockHash || new Buffer('0000000000000000000000000000000000000000000000000000000000000000','hex');
   this.timestamp = info.timestamp || new BN('0');
-  this.bits = info.bits || new BN('0');
-  this.nonce = info.nonce ||  new BN('0');
   this.blockCommitment = info.blockCommitment || new BlockCommitment({})
+  this.blockWitness = info.blockWitness || new BlockWitness({})
 
   return this;
 };
@@ -48,8 +48,7 @@ BlockHeader._fromBufferReader = function _fromBufferReader(br) {
   info.previousBlockHash = br.read(32);
   info.timestamp = br.readVarint63();
   info.blockCommitment = br.readExtensibleString(BlockCommitment.readFrom)
-  info.nonce = br.readVarint63();
-  info.bits = br.readVarint63();
+  info.blockWitness = br.readExtensibleString(BlockWitness.readFrom)
 
   return info;
 };
@@ -74,8 +73,7 @@ BlockHeader.prototype.toObject = BlockHeader.prototype.toJSON = function toObjec
     previousBlockHash: this.previousBlockHash.toString('hex'),
     timestamp: convertBNtoN(this.timestamp),
     blockCommitment: this.blockCommitment.toObject(),
-    nonce: convertBNtoN(this.nonce),
-    bits: convertBNtoN(this.bits),
+    blockWitness: this.blockWitness.toObject()
   };
 };
 
@@ -124,8 +122,7 @@ BlockHeader.prototype.writeTo = function writeTo(bw, serflags) {
   bw.write(this.previousBlockHash);
   bw.writeVarint63(this.timestamp);
   bw.writeExtensibleString([], this.blockCommitment.writeTo(new BufferWriter()))
-  bw.writeVarint63(this.nonce);
-  bw.writeVarint63(this.bits);
+  bw.writeExtensibleString([], this.blockWitness.writeTo(new BufferWriter()))
   return bw;
 };
 

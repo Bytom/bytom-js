@@ -20,6 +20,7 @@ VoteOutput.prototype.typ = function () {
 VoteOutput.prototype.writeForHash = function(w) {
   Entry.writeForHash(w, this.source)
   Entry.writeForHash(w, this.controlProgram)
+  Entry.writeForHash(w, this.vote)
 }
 
 // NewVoteOutput creates a new VoteOutput.

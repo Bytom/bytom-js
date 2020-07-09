@@ -1,5 +1,8 @@
-let bcOutput= require('../bc/output.js')
+let bcIntrachainOutput= require('../bc/intrachainOutput.js')
+let bcCrosschainOutput= require('../bc/crosschainOutput.js')
 let bcSpend= require('../bc/spend.js')
+let bcVetoInput= require('../bc/vetoInput.js')
+let bcVoteOutput= require('../bc/voteOutput.js')
 let bcIssuance= require('../bc/issurance.js')
 let BufferWriter = require('../../../lib/binary/writer.js');
 
@@ -30,43 +33,76 @@ Tx.prototype.sigHash = function(n){
   return hash
 }
 
-Tx.prototype.output = function(id) {
+Tx.prototype.intraChainOutput = function(id) {
   let e = this.entries[id]
   if (!e){
-   throw Error('error: Missing Entry')
+    throw Error('error: Missing Entry' +id)
   }
-
-  if(e instanceof bcOutput){
+  if(e instanceof bcIntrachainOutput){
     return e
   }else{
-    throw  Error('entry  has unexpected type')
+    throw  Error(`entry ${id} has unexpected type ${e}`)
   }
+}
+
+Tx.prototype.crossChainOutput = function(id) {
+  let e = this.entries[id]
+  if (!e){
+    throw Error('error: Missing Entry' +id)
+  }
+  if(e instanceof bcCrosschainOutput){
+    return e
+  }else{
+    throw  Error(`entry ${id} has unexpected type ${e}`)
+  }
+}
+
+Tx.prototype.entry = function(id) {
+  let e = this.entries[id]
+  if (!e){
+    throw Error('error: Missing Entry' +id)
+  }
+  return e
 }
 
 Tx.prototype.spend = function(id) {
   let e = this.entries[id]
   if (!e){
-   throw Error('error: Missing Entry')
+    throw Error('error: Missing Entry' +id)
   }
 
   if(e instanceof bcSpend){
     return e
   }else{
-    throw  Error('entry  has unexpected type')
+    throw  Error(`entry ${id} has unexpected type ${e}`)
   }
 }
 
-Tx.prototype.issuance = function(id) {
+Tx.prototype.vetoInput = function(id) {
   let e = this.entries[id]
   if (!e){
-   throw Error('error: Missing Entry')
+    throw Error('error: Missing Entry' +id)
   }
 
-  if(e instanceof bcIssuance){
+  if(e instanceof bcVetoInput){
     return e
   }else{
-    throw  Error('entry  has unexpected type')
+    throw  Error(`entry ${id} has unexpected type ${e}`)
   }
 }
+
+Tx.prototype.voteOutput = function(id) {
+  let e = this.entries[id]
+  if (!e){
+    throw Error('error: Missing Entry' +id)
+  }
+
+  if(e instanceof bcVoteOutput){
+    return e
+  }else{
+    throw  Error(`entry ${id} has unexpected type ${e}`)
+  }
+}
+
 
 module.exports = Tx;

@@ -1,4 +1,5 @@
 // https://github.com/Bytom/vapor/blob/master/protocol/bc/types/vote_output.go
+const VoteOutputType = '02'
 
 let VoteOutput = function VoteOutput(arg) {
   if (!(this instanceof VoteOutput)) {
@@ -18,6 +19,10 @@ VoteOutput.prototype.toObject = VoteOutput.prototype.toJSON = function toObject(
     vote : this.vote
   };
   return obj;
+};
+
+VoteOutput.prototype.outputType = function() {
+  return VoteOutputType;
 };
 
 module.exports = VoteOutput;

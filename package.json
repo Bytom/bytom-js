@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "description": "bytom client libraries for Javascript",
   "scripts": {
-    "test": "mocha",
+    "test-bytom": "mocha bytom/test",
+    "test-vapor": "mocha vapor/test",
     "only-test": "mocha --inspect-brk test",
     "build": "browserify  --require ./index.js:bytomjs-lib -o bytomjs-lib.js"
   },

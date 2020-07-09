@@ -1,4 +1,5 @@
 // https://github.com/Bytom/vapor/blob/master/protocol/bc/types/crosschain_output.go
+const CrossChainOutputType = '01'
 
 let CrossChainOutput = function CrossChainOutput(arg) {
   if (!(this instanceof CrossChainOutput)) {
@@ -17,6 +18,10 @@ CrossChainOutput.prototype.toObject = CrossChainOutput.prototype.toJSON = functi
     commitmentSuffix : this.commitmentSuffix
   };
   return obj;
+};
+
+CrossChainOutput.prototype.outputType = function() {
+  return CrossChainOutputType;
 };
 
 module.exports = CrossChainOutput;

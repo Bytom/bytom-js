@@ -11,7 +11,7 @@ let SpendCommitment = function SpendCommitment(arg) {
   this.sourceID = info.sourceID;
   this.sourcePosition = info.sourcePosition;
   this.vmVersion = info.vmVersion
-  this.controlProgram = info.controlProgram
+  this.controlProgram = info.controlProgram || new Buffer('')
 
   return this;
 };
@@ -42,7 +42,7 @@ SpendCommitment.readFrom = function readFrom(br, assetVersion, obj) {
 
       obj.vmVersion = new BN(reader.readVarint63())
       if(!obj.vmVersion.eq(new BN(1)) ) {
-        return Error("unrecognized VM version %d for asset version 1"+ obj.vmVersion)
+        return Error(`unrecognized VM version ${obj.vmVersion} for asset version 1`)
       }
 
       obj.controlProgram = reader.readVarstr31()

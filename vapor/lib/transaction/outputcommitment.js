@@ -37,11 +37,11 @@ OutputCommitment.readFrom = function readFrom(br, resultObject) {
       obj.vmVersion = new BN(reader.readVarint63())
 
       if(!obj.vmVersion.eq(new BN(1)) ) {
-        return Error("unrecognized VM version %d for asset version 1"+ obj.vmVersion)
+        return Error(`unrecognized VM version ${obj.vmVersion} for asset version 1`)
       }
       obj.controlProgram = reader.readVarstr31()
 
-      resultObject.outputCommitment = new OutputCommitment(obj)
+      resultObject.typedOutput = { outputCommitment : new OutputCommitment(obj)}
     }
     return undefined
   })

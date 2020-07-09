@@ -295,7 +295,7 @@ Input.newVetoInput = function(args, sourceID, assetID , amount, sourcePos, contr
   })
   return new Input({
     assetVersion: 1,
-    typedInput: new SpendInput({
+    typedInput: new VetoInput({
       spendCommitment: sc,
       arguments:       args,
       vote:            vote,
