@@ -260,7 +260,7 @@ Input.newCoinbaseInput = function(arbitrary) {
   })
 }
 
-Input.newCrossChainInput= function(arguments, sourceID, assetID, amount, sourcePos, issuanceVMVersion, assetDefinition, issuanceProgram ) {
+Input.newCrossChainInput= function(args, sourceID, assetID, amount, sourcePos, issuanceVMVersion, assetDefinition, issuanceProgram ) {
   let sc = new SpendCommitment({
     assetAmount: {
       assetID: assetID,
@@ -274,7 +274,7 @@ Input.newCrossChainInput= function(arguments, sourceID, assetID, amount, sourceP
     assetVersion: 1,
     typedInput: new CrossChainInput({
       spendCommitment:   sc,
-      arguments:         arguments,
+      arguments:         args,
       assetDefinition:   assetDefinition,
       issuanceVMVersion: issuanceVMVersion,
       issuanceProgram:   issuanceProgram,
