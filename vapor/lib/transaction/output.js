@@ -141,7 +141,7 @@ Output.prototype.toObject = Output.prototype.toJSON = function toObject() {
   let obj = {
     assetVersion: this.assetVersion,
     commitmentSuffix: this.commitmentSuffix,
-    outputCommitment: this.outputCommitment.toObject()
+    typedOutput: this.typedOutput.toObject()
   };
   return obj;
 };

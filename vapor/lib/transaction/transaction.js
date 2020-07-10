@@ -8,6 +8,7 @@ let BN = require('bn.js');
 
 let {mapTx} = require('./map.js')
 let {convertBNtoN} = require('../../../lib/util/convert')
+let {buildAnnotatedInput, buildAnnotatedOutput} = require('../util/convert')
 
 
 const serRequired = 0x7 // Bit mask accepted serialization flag.
@@ -25,7 +26,7 @@ function Transaction(serialized) {
 
   if (serialized) {
     if (serialized instanceof Transaction) {
-      return Transaction.shallowCopy(serialized);
+      return new Transaction(Object.assign({}, serialized));
     } else if (_.isString(serialized)) {
       this.fromString(serialized);
     } else if (Buffer.isBuffer(serialized)) {
@@ -97,7 +98,32 @@ Transaction.prototype._writeTo = function(w, serflags) {
   return w;
 };
 
-Transaction.readFrom = function(r) {
+Transaction.decodeRawTransaction = function(raw) {
+  const _txData = this.prototype.readFrom( new BufferReader(raw))
+  const _tx= mapTx(_txData)
+  _txData.Tx = _tx
+  const txData = _txData.toObject()
+  const tx = {
+    txId: _tx.id,
+    version:   txData.version,
+    size:      txData.serializedSize,
+    timeRange: txData.timeRange,
+    inputs:    [],
+    outputs:   [],
+  }
+
+  for (let i in txData.inputs ){
+    tx.inputs.push( buildAnnotatedInput(_txData, i))
+  }
+
+  for (let o in txData.outputs ){
+    tx.outputs.push( buildAnnotatedOutput(_txData, o))
+  }
+
+  return tx
+}
+
+Transaction.prototype.readFrom = function(r) {
   let info = {};
   let startSerializedSize = r.pos
   let serflags = r.read(1).toString('hex')

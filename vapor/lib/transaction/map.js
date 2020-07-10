@@ -49,21 +49,21 @@ function mapTx(oldTx) {
     if (e instanceof bcSpend) {
       ord = e.ordinal
       spentOutputIDs[e.spentOutputId] = true
-      if (e.witnessDestination.value.assetId == BTMAssetID) {
+      if (e.witnessDestination.value.assetID == BTMAssetID) {
         tx.gasInputIDs.push(id)
       }
     }
     else if (e instanceof bcVetoInput) {
       ord = e.ordinal
       spentOutputIDs[e.spentOutputId] = true
-      if (e.witnessDestination.value.assetId == BTMAssetID) {
+      if (e.witnessDestination.value.assetID == BTMAssetID) {
         tx.gasInputIDs.push(id)
       }
     }
     else if (e instanceof bcCrossChainInput) {
       ord = e.ordinal
       mainchainOutputIDs[e.mainchainOutputId] = true
-      if (e.witnessDestination.value.assetId == BTMAssetID) {
+      if (e.witnessDestination.value.assetID == BTMAssetID) {
         tx.gasInputIDs.push(id)
       }
     }
@@ -243,18 +243,18 @@ function _mapTx(tx) {
       resultID = addEntry(r)
     } else if( out.outputType() === IntraChainOutputType){
       // non-retirement
-      let prog = { vmVersion:out.outputCommitment.vmVersion, controlProgram: out.outputCommitment.controlProgram}
+      let prog = { vmVersion:out.outputCommitment.vmVersion, code: out.outputCommitment.controlProgram}
       let o = bcIntrachainOutput.newIntraChainOutput(src, prog, new BN(i))
       resultID = addEntry(o)
     }else if( out.outputType() === CrossChainOutputType){
       // non-retirement
-      let prog = { vmVersion:out.outputCommitment.vmVersion, controlProgram: out.outputCommitment.controlProgram}
+      let prog = { vmVersion:out.outputCommitment.vmVersion, code: out.outputCommitment.controlProgram}
       let o = bcCrossChainInput.newCrossChainInput(src, prog, new BN(i))
       resultID = addEntry(o)
     }else if( out.outputType() === VoteOutputType){
       // non-retirement
-      let voteOut = out.typedOutput
-      let prog = { vmVersion:out.outputCommitment.vmVersion, controlProgram: out.outputCommitment.controlProgram}
+      let voteOut = out
+      let prog = { vmVersion:out.outputCommitment.vmVersion, code: out.outputCommitment.controlProgram}
       let o = bcVoteOutput.newVoteOutput(src, prog, new BN(i), voteOut.vote)
       resultID = addEntry(o)
     }else{

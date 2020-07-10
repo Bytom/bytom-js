@@ -20,6 +20,8 @@ function Tx(args) {
   this.spentOutputIDs = info.spentOutputIDs||[]
   this.gasInputIDs = info.gasInputIDs||[]
 
+  this.txHeader = info.txHeader
+
   return this;
 }
 

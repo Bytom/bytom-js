@@ -16,7 +16,7 @@ VoteOutput.prototype.toObject = VoteOutput.prototype.toJSON = function toObject(
   let obj = {
     outputCommitment: this.outputCommitment.toObject(),
     commitmentSuffix : this.commitmentSuffix,
-    vote : this.vote
+    vote : this.vote.toString('hex')
   };
   return obj;
 };
