@@ -9,6 +9,7 @@ const BcIntraChainOutput = require('../bc/intraChainOutput')
 const BcCrossChainOutput = require('../bc/crossChainOutput')
 const BcVoteOutput = require('../bc/voteOutput')
 const BTMAssetID = require('../../../lib/util/constance').BTMAssetID
+let {getAddressFromControlProgram} = require('../../../lib/util/convert')
 
 function buildAnnotatedInput(tx, i) {
   let orig = tx.inputs[i].typedInput
@@ -35,6 +36,7 @@ function buildAnnotatedInput(tx, i) {
 
     inp.type = "veto"
     inp.controlProgram = spendCommitment.controlProgram
+    inp.address = getAddressFromControlProgram(inp.controlProgram, false)
     inp.spentOutputID = e.spentOutputId
     let _arguments = orig.arguments
     for (let _arg of _arguments) {
@@ -46,6 +48,7 @@ function buildAnnotatedInput(tx, i) {
     inp.type = "cross_chain_in"
     let controlProgram = spendCommitment.controlProgram
     inp.controlProgram = controlProgram
+    inp.address = getAddressFromControlProgram(controlProgram, true)
     inp.spentOutputID = e.mainchainOutputId
     let _arguments = orig.arguments
     for (let _arg of _arguments) {
@@ -56,6 +59,7 @@ function buildAnnotatedInput(tx, i) {
     inp.type = "spend"
     let controlProgram = spendCommitment.controlProgram
 
+    inp.address = getAddressFromControlProgram(controlProgram, false)
     inp.controlProgram = controlProgram
     inp.spentOutputID = e.spentOutputId
     let _arguments = orig.arguments
@@ -98,6 +102,8 @@ function buildAnnotatedOutput(tx, idx) {
     out.vote = Buffer.isBuffer(e.vote) ? e.vote.toString("hex"): e.vote
     isMainchainAddress = false
   }
+
+  out.address = getAddressFromControlProgram(out.controlProgram, isMainchainAddress)
 
   return out
 }
