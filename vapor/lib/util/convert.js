@@ -10,6 +10,8 @@ const BcCrossChainOutput = require('../bc/crossChainOutput')
 const BcVoteOutput = require('../bc/voteOutput')
 const BTMAssetID = require('../../../lib/util/constance').BTMAssetID
 let {getAddressFromControlProgram} = require('../../../lib/util/convert')
+let BN = require('bn.js');
+
 
 function buildAnnotatedInput(tx, i) {
   let orig = tx.inputs[i].typedInput
@@ -108,7 +110,31 @@ function buildAnnotatedOutput(tx, idx) {
   return out
 }
 
+function calculateTxFee(tx ) {
+  let fee = new BN(0)
+  for (let _input of tx.inputs ){
+    const input = _input.typedInput.spendCommitment
+    const _assetID = input.assetAmount.assetID
+    const assetID = Buffer.isBuffer(_assetID)? _assetID.toString("hex"):_assetID
+    if (assetID == BTMAssetID ){
+      fee = fee.add(input.assetAmount.amount)
+    }
+  }
+
+  for(let _output of tx.outputs ) {
+    const output = _output.typedOutput.outputCommitment
+
+    const _assetID = output.assetAmount.assetID
+    const assetID = Buffer.isBuffer(_assetID)? _assetID.toString("hex"):_assetID
+    if(assetID == BTMAssetID ){
+      fee = fee.sub(output.assetAmount.amount)
+    }
+  }
+  return fee
+}
+
 module.exports = {
   buildAnnotatedInput,
-  buildAnnotatedOutput
+  buildAnnotatedOutput,
+  calculateTxFee
 }
