@@ -8,7 +8,7 @@ let BN = require('bn.js');
 
 let {mapTx} = require('./map.js')
 let {convertBNtoN} = require('../../../lib/util/convert')
-
+let {buildAnnotatedInput, buildAnnotatedOutput, calculateTxFee} = require('../util/convert')
 
 const serRequired = 0x7 // Bit mask accepted serialization flag.
 
@@ -182,6 +182,31 @@ Transaction.prototype.fromString = function(string) {
   this.fromBuffer(Buffer.from(string, 'hex'));
 };
 
+Transaction.decodeRawTransaction = function(raw) {
+  const _txData = this.readFrom( new BufferReader(raw))
+  const _tx= mapTx(_txData)
+  _txData.Tx = _tx
+  const txData = _txData.toObject()
+  const tx = {
+    txId: _tx.id,
+    version:   txData.version,
+    size:      txData.serializedSize,
+    timeRange: txData.timeRange,
+    inputs:    [],
+    outputs:   [],
+  }
+
+  for (let i in txData.inputs ){
+    tx.inputs.push( buildAnnotatedInput(_txData, i))
+  }
+
+  for (let o in txData.outputs ){
+    tx.outputs.push( buildAnnotatedOutput(_txData, o))
+  }
+
+  tx.fee = convertBNtoN(calculateTxFee(_txData))
+  return tx
+}
 
 
 module.exports = Transaction;

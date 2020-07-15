@@ -7,6 +7,8 @@ function VetoInput(args) {
   let info = args
   this.spentOutputId = info.spentOutputId
   this.ordinal = info.ordinal
+  this.witnessDestination = info.witnessDestination
+  this.witnessArguments = info.witnessArguments
 
   return this;
 }

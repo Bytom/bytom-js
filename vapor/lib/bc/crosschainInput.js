@@ -10,6 +10,7 @@ function CrossChainInput(args) {
   this.controlProgram = info.controlProgram
   this.assetDefinition = info.assetDefinition
   this.rawDefinitionByte = info.rawDefinitionByte
+  this.witnessDestination = info.witnessDestination
 
   return this;
 }

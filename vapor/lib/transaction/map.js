@@ -5,6 +5,7 @@ let VetoInput = require('./vetoInput.js')
 let CrossChainInput = require('./crosschainInput.js')
 let bcSpend = require('../bc/spend.js')
 let bcCrossChainInput = require('../bc/crosschainInput.js')
+let bcCrossChainOutput = require('../bc/crosschainOutput.js')
 let bcCoinbase = require('../bc/coinbase.js')
 let bcIntrachainOutput = require('../bc/intrachainOutput.js')
 let bcVetoInput = require('../bc/vetoInput.js')
@@ -49,21 +50,27 @@ function mapTx(oldTx) {
     if (e instanceof bcSpend) {
       ord = e.ordinal
       spentOutputIDs[e.spentOutputId] = true
-      if (e.witnessDestination.value.assetID == BTMAssetID) {
+      let assetId = e.witnessDestination.value.assetID
+      assetId = Buffer.isBuffer(assetId)? assetId.toString("hex"):assetId
+      if (assetId == BTMAssetID) {
         tx.gasInputIDs.push(id)
       }
     }
     else if (e instanceof bcVetoInput) {
       ord = e.ordinal
       spentOutputIDs[e.spentOutputId] = true
-      if (e.witnessDestination.value.assetID == BTMAssetID) {
+      let assetId = e.witnessDestination.value.assetID
+      assetId = Buffer.isBuffer(assetId)? assetId.toString("hex"):assetId
+      if (assetId == BTMAssetID) {
         tx.gasInputIDs.push(id)
       }
     }
     else if (e instanceof bcCrossChainInput) {
       ord = e.ordinal
       mainchainOutputIDs[e.mainchainOutputId] = true
-      if (e.witnessDestination.value.assetID == BTMAssetID) {
+      let assetId = e.witnessDestination.value.assetID
+      assetId = Buffer.isBuffer(assetId)? assetId.toString("hex"):assetId
+      if (assetId == BTMAssetID) {
         tx.gasInputIDs.push(id)
       }
     }
@@ -79,12 +86,15 @@ function mapTx(oldTx) {
     }
   }
 
+  tx.spentOutputIDs =[]
+  tx.mainchainOutputIDs =[]
+
   for(let id in spentOutputIDs) {
-    tx.spentOutputIDs = tx.spentOutputIDs? tx.spentOutputIDs.push(id):[id]
+    tx.spentOutputIDs.push(id)
   }
 
   for(let id in mainchainOutputIDs) {
-    tx.mainchainOutputIDs = tx.mainchainOutputIDs? tx.mainchainOutputIDs.push(id):[id]
+    tx.mainchainOutputIDs.push(id)
   }
 
   return new bcTx(tx)
@@ -204,7 +214,6 @@ function _mapTx(tx) {
   let mux = bcMux.newMux(muxSources, {vmVersion: new BN(1), code: Buffer.from([OP_TRUE])})
 
   let muxID = addEntry(mux)
-
   // connect the inputs to the mux
   for (let spend of spends ){
     let spentOutput = entryMap[spend.spentOutputId]
@@ -249,7 +258,7 @@ function _mapTx(tx) {
     }else if( out.outputType() === CrossChainOutputType){
       // non-retirement
       let prog = { vmVersion:out.outputCommitment.vmVersion, code: out.outputCommitment.controlProgram}
-      let o = bcCrossChainInput.newCrossChainInput(src, prog, new BN(i))
+      let o = bcCrossChainOutput.newCrossChainOutput(src, prog, new BN(i))
       resultID = addEntry(o)
     }else if( out.outputType() === VoteOutputType){
       // non-retirement
@@ -267,7 +276,11 @@ function _mapTx(tx) {
       position: 0,
     }
     resultIDs.push(resultID)
-    mux.witnessDestinations = (Array.isArray(mux.witnessDestinations)? mux.witnessDestinations.push(dest): [dest])
+    if(Array.isArray(mux.witnessDestinations)){
+      mux.witnessDestinations.push(dest)
+    }else{
+      mux.witnessDestinations = [dest]
+    }
   }
 
   let h = bcTxHeader.newTxHeader(tx.version, tx.serializedSize, tx.timeRange, resultIDs)

@@ -61,8 +61,9 @@ function mapTx(oldTx) {
     tx.inputIDs[ord] = id
   }
 
+  tx.spentOutputIDs =[]
   for(let id in spentOutputIDs) {
-    tx.spentOutputIDs = tx.spentOutputIDs? tx.spentOutputIDs.push(id):[id]
+    tx.spentOutputIDs.push(id)
   }
 
   return new bcTx(tx)

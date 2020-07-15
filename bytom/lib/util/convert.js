@@ -1,14 +1,9 @@
-const Constance = require('./constance')
-const VetoInput = require('../transaction/vetoInput')
 const CoinbaseInput = require('../transaction/coinbaseInput')
-const BcVetoInput = require('../bc/vetoInput')
-const BcCrosschainInput = require('../bc/crosschainInput')
 const BcSpend = require('../bc/spend')
 const BcCoinbase = require('../bc/coinbase')
-const BcIntraChainOutput = require('../bc/intrachainOutput')
-const BcCrossChainOutput = require('../bc/crosschainOutput')
-const BcVoteOutput = require('../bc/voteOutput')
+const BcIssurance = require('../bc/issurance')
 const BTMAssetID = require('../../../lib/util/constance').BTMAssetID
+const Opcode = require('../../../lib/util/opcode')
 let {getAddressFromControlProgram} = require('../../../lib/util/convert')
 let BN = require('bn.js');
 
@@ -23,12 +18,6 @@ function buildAnnotatedInput(tx, i) {
     inp.amount = assetAmount.amount
     let signData = tx.Tx.sigHash(i)
     inp.signData = signData
-    let vetoInput = orig
-    if (vetoInput instanceof VetoInput) {
-      let vote = vetoInput.vote
-      vote = Buffer.isBuffer(vote)?vote.toString('hex'):vote
-      inp.vote = vote
-    }
   } else {
     inp.assetID = BTMAssetID
   }
@@ -36,46 +25,34 @@ function buildAnnotatedInput(tx, i) {
   let id = tx.Tx.inputIDs[i]
   inp.inputID = id
   let e = tx.Tx.entries[id]
-  if (e.typ() === BcVetoInput.prototype.typ()) {
-
-    inp.type = "veto"
-    inp.controlProgram = spendCommitment.controlProgram
-    inp.address = getAddressFromControlProgram(inp.controlProgram, false)
-    inp.spentOutputID = e.spentOutputId
-    inp.arguments = []
-
-    let _arguments = orig.arguments
-    for (let _arg of _arguments) {
-      const arg = Buffer.isBuffer(_arg) ? _arg.toString('hex') : _arg
-      inp.arguments.push(arg)
-    }
-  } else if (e.typ() === BcCrosschainInput.prototype.typ()) {
-
-    inp.type = "cross_chain_in"
-    let controlProgram = spendCommitment.controlProgram
-    inp.controlProgram = controlProgram
-    inp.address = getAddressFromControlProgram(controlProgram, true)
-    inp.spentOutputID = e.mainchainOutputId
-    inp.arguments = []
-
-    let _arguments = orig.arguments
-    for (let _arg of _arguments) {
-      const arg = Buffer.isBuffer(_arg) ? _arg.toString('hex') : _arg
-      inp.arguments.push(arg)
-    }
-  } else if (e.typ() === BcSpend.prototype.typ()) {
+  if (e.typ() === BcSpend.prototype.typ()) {
     inp.type = "spend"
     let controlProgram = spendCommitment.controlProgram
 
-    inp.address = getAddressFromControlProgram(controlProgram, false)
+    inp.address = getAddressFromControlProgram(controlProgram)
     inp.controlProgram = controlProgram
     inp.spentOutputID = e.spentOutputId
-    inp.arguments = []
+    inp.witnessArguments =[]
 
     let _arguments = orig.arguments
     for (let _arg of _arguments) {
       const arg = Buffer.isBuffer(_arg) ? _arg.toString('hex') : _arg
-      inp.arguments.push(arg)
+      inp.witnessArguments.push(arg)
+    }
+  } else if (e.typ() === BcIssurance.prototype.typ()) {
+    inp.type = "issue"
+    let issuanceProgram = spendCommitment.issuanceProgram
+    inp.issuanceProgram = issuanceProgram
+
+    let _arguments = orig.witnessArguments
+    inp.witnessArguments =[]
+
+    for (let _arg of _arguments) {
+      const arg = Buffer.isBuffer(_arg) ? _arg.toString('hex') : _arg
+      inp.witnessArguments.push(arg)
+    }
+    if(this.assetDefinition){
+      inp.assetDefinition = this.assetDefinition.toString('hex')
     }
   } else if (e.typ() === BcCoinbase.prototype.typ()) {
     inp.type = "coinbase"
@@ -85,7 +62,7 @@ function buildAnnotatedInput(tx, i) {
 }
 
 function buildAnnotatedOutput(tx, idx) {
-  let orig = tx.outputs[idx].typedOutput
+  let orig = tx.outputs[idx]
   let outid = tx.Tx.txHeader.resultIDs[idx]
   const outputCommitment = orig.outputCommitment.toObject()
 
@@ -95,25 +72,14 @@ function buildAnnotatedOutput(tx, idx) {
     assetID: outputCommitment.assetAmount.assetID,
     amount: outputCommitment.assetAmount.amount,
     controlProgram: outputCommitment.controlProgram,
+    address: getAddressFromControlProgram(outputCommitment.controlProgram)
   }
 
-  let isMainchainAddress
-
-  let e = tx.Tx.entries[outid]
-
-  if (e.typ() === BcIntraChainOutput.prototype.typ()) {
-    out.type = "control"
-    isMainchainAddress = false
-  } else if (e.typ() === BcCrossChainOutput.prototype.typ()) {
-    out.type = "cross_chain_out"
-    isMainchainAddress = true
-  } else if (e.typ() === BcVoteOutput.prototype.typ()) {
-    out.type = "vote"
-    out.vote = Buffer.isBuffer(e.vote) ? e.vote.toString("hex"): e.vote
-    isMainchainAddress = false
+  if(_isUnspendable(out.controlProgram)){
+    out.type = 'retire'
+  }else{
+    out.type = 'control'
   }
-
-  out.address = getAddressFromControlProgram(out.controlProgram, isMainchainAddress)
 
   return out
 }
@@ -130,7 +96,7 @@ function calculateTxFee(tx ) {
   }
 
   for(let _output of tx.outputs ) {
-    const output = _output.typedOutput.outputCommitment
+    const output = _output.outputCommitment
 
     const _assetID = output.assetAmount.assetID
     const assetID = Buffer.isBuffer(_assetID)? _assetID.toString("hex"):_assetID
@@ -139,6 +105,10 @@ function calculateTxFee(tx ) {
     }
   }
   return fee
+}
+
+function _isUnspendable(prog) {
+  return prog.length > 0 && prog[0] == Opcode.OP_FAIL
 }
 
 module.exports = {
