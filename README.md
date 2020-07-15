@@ -11,12 +11,112 @@ npm install bytomjs-lib
 ```
 
 ## Examples
-Decode Raw Transactions,
+Decode a Bytom Raw Transactions,
 ```javascript
-let Bytom = require("bytomjs-lib")
+let BytomJs = require("bytomjs-lib")
 
-let block= Bytom.Block.readFrom(Bytom.binary.BufferReader('030154749faac93cbfe9c786e63e5e06e9e2c152cc009c028ac24403f97cfae269abd8a7adedee0540143d9d8734a1302246e6b2fdad7a3d49bcdd03abd85d5a78064d8920f7dfec956978a65b4ee5b6f4914fe5c05000459a803ecf59132604e5d334d64249c5e50a29cc99b38080808080200207010001010502030038340001013effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80cdcde89901011600141303b5d01e4959fe8ca5cff206addfae8d5c09510007010001016c016a86b6f24570782162e81d3afbe2e522e514c124478f60156f9207225b49bbf1c6ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8094ebdc03010122002010ce2861c8e16d764de12cc98e740c2b9f1f95a2949da467425fb1759324b58fca010340075d8deab6b27b8ce75217e0c685e974a7f9ca31d75d658fa5a5a160baebc770724f18be7020ed978650cf86e1eb718569cacabe5c63fb0ace59af27652c3a01408cf6c9adcc13977a6ee7a8127eb2f2210edf8ee1afad225caba819c5baaa62c43d5c765ecc844c235ad489096de983fd0525f809ad857ad5d39064f7ade1380f46ae20b33e7965e602fe772c213dbe2fbba401a8f280cfb340176806403b821e2af9b32086b81eff9a41f9bb454e642443ef6b591eed99a3d58a62d0aebadfcb5634c8ba5252ad020149ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8090bcfd020122002010ce2861c8e16d764de12cc98e740c2b9f1f95a2949da467425fb1759324b58f00013cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80d0a54c011600141303b5d01e4959fe8ca5cff206addfae8d5c095100'))
-console.log(block.toObject())
+let tx= BytomJs.bytom.Transaction.decodeRawTransaction('070100010160015e5978c52e0508cbf1cd901919277e4dba80fb4440b4771bbaa3b6c483f9264d21ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8094ebdc0301011600143c21d88332683d060ccf905a0f26ce82907ac132220120f3a597b7a1f8b7b210790d5ceef145ae8616d025a6fdb4aec67338bf937af6b9020139ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6401160014f0928dc5f8878a4289b981d7c66386ff74be7fc300013dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb4dfcfdc03011600143c21d88332683d060ccf905a0f26ce82907ac13200')
+console.log(tx)
+
+/*
+* {
+    "txId": "a6c593cd7998fb7d54613b836e425798bfb82acb55412a3f4a03b291172e0e1d",
+    "version": 1,
+    "size": 262,
+    "timeRange": 0,
+    "inputs": [
+      {
+        "assetID": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "amount": 1000000000,
+        "signData": "88f7c410770955e37d3bedf75c074cb9ee4551f29dbf96c68e81dea3acd57476",
+        "inputID": "aaf67d228662b3f0c08094142eca2f5c7f5424d937e5e6e82d7abbfb7c6a6f4c",
+        "type": "spend",
+        "address": "bm1q8ssa3qejdq7svrx0jpdq7fkws2g84sfjg5d89d",
+        "controlProgram": "00143c21d88332683d060ccf905a0f26ce82907ac132",
+        "spentOutputID": "417a3414a3ef0c2686e228ef671c0e9c56d582c1e77d07dcf06e67f81743d431",
+        "witnessArguments": [
+          "f3a597b7a1f8b7b210790d5ceef145ae8616d025a6fdb4aec67338bf937af6b9"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "outputID": "02cec554b3888cde2144d05b0b40d89f01650aae7855cbd2b936934922376f84",
+        "position": "0",
+        "assetID": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "amount": 100,
+        "controlProgram": "0014f0928dc5f8878a4289b981d7c66386ff74be7fc3",
+        "address": "bm1q7zfgm30cs79y9zdes8tuvcuxla6tul7rgce7u7",
+        "type": "control"
+      },
+      {
+        "outputID": "985c9396341813825cf715fdfa428b836f8bc1d2631364d2dc612e9c579e9144",
+        "position": "1",
+        "assetID": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "amount": 999550900,
+        "controlProgram": "00143c21d88332683d060ccf905a0f26ce82907ac132",
+        "address": "bm1q8ssa3qejdq7svrx0jpdq7fkws2g84sfjg5d89d",
+        "type": "control"
+      }
+    ],
+    "fee": 449000
+  }
+  */
+
+```
+
+Decode a Vapor Raw Transactions,
+```javascript
+let BytomJs = require("bytomjs-lib")
+
+let tx= BytomJs.vapor.Transaction.decodeRawTransaction('07018ff3f61f010160015eb99041e009a3683df89f5bc57056a9f95457250d3f5fdfc17a4c8fdb2addea5affffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80bce7d1010101160014d0742d785131290d0625d41f48f26792806670c02201205ab7ff3f37dcc46829e3680871ee9890c5d3d094ea04c221fee6d1c721eadb8302017f024050ef22b3a3fca7bc08916187cc9ec2f4005c9c6b1353aa1decbd4be3f3bb0fbe1967589f0d9dec13a388c0412002d2c267bdf3b920864e1ddc50581be5604ce13cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80c2d72f01160014d0742d785131290d0625d41f48f26792806670c000013f003dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80fa8fa20101160014d0742d785131290d0625d41f48f26792806670c000')
+console.log(tx)
+
+/*
+{
+   "txId": "2d0e741017cc2166837c87179014d2f36a596c4412d67c568f4829e329baea38",
+   "version": 1,
+   "size": 337,
+   "timeRange": 66959759,
+   "inputs": [
+     {
+       "assetID": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+       "amount": 440000000,
+       "signData": "25ac3c487f715f7a3256cca409102e6ad919e21b96a4292c75be9be326ad4096",
+       "inputID": "74002b078b810041abf3e35805d53130c9238d159f79ab2a338164d1f3d04934",
+       "type": "spend",
+       "address": "vp1q6p6z67z3xy5s6p396s053un8j2qxvuxqejegqd",
+       "controlProgram": "0014d0742d785131290d0625d41f48f26792806670c0",
+       "spentOutputID": "1b8ac8813b0caa7b2d7342b9d2b89a2a1e1fb1f4bc0575d07aadc93ad4ed9ee0",
+       "arguments": [
+         "5ab7ff3f37dcc46829e3680871ee9890c5d3d094ea04c221fee6d1c721eadb83"
+       ]
+     }
+   ],
+   "outputs": [
+     {
+       "outputID": "cc3f68372e4fcfa80b829993e81481e306746b45c6c31dc1724d82742011b101",
+       "position": "0",
+       "assetID": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+       "amount": 100000000,
+       "controlProgram": "0014d0742d785131290d0625d41f48f26792806670c0",
+       "type": "vote",
+       "vote": "50ef22b3a3fca7bc08916187cc9ec2f4005c9c6b1353aa1decbd4be3f3bb0fbe1967589f0d9dec13a388c0412002d2c267bdf3b920864e1ddc50581be5604ce1",
+       "address": "vp1q6p6z67z3xy5s6p396s053un8j2qxvuxqejegqd"
+     },
+     {
+       "outputID": "89e440e950715ab6c4cce7a5be7fd6c20529a2f5722727755a9e1cebc5b66599",
+       "position": "1",
+       "assetID": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+       "amount": 340000000,
+       "controlProgram": "0014d0742d785131290d0625d41f48f26792806670c0",
+       "type": "control",
+       "address": "vp1q6p6z67z3xy5s6p396s053un8j2qxvuxqejegqd"
+     }
+   ],
+   "fee": 0
+ } 
+**/
 
 ```
 
