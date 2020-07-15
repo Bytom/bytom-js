@@ -1,11 +1,11 @@
 
 'use strict';
 
-let bytom = module.exports;
+let bytomJs = module.exports;
 
 // module information
-bytom.version = 'v' + require('./package.json').version;
-bytom.versionGuard = function(version) {
+bytomJs.version = 'v' + require('./package.json').version;
+bytomJs.versionGuard = function(version) {
   if (version !== undefined) {
     let message = 'More than one instance of bytom-lib found. ' +
       'Please make sure to require bytom-lib and check that submodules do' +
@@ -13,24 +13,19 @@ bytom.versionGuard = function(version) {
     throw new Error(message);
   }
 };
-bytom.versionGuard(global._bytom);
-global._bytom = bytom.version;
+bytomJs.versionGuard(global._bytomJs);
+global._bytomJs = bytomJs.version;
 
+bytomJs.bytom = require('./bytom');
+bytomJs.vapor = require('./vapor');
 // binary
-bytom.binary = {};
-bytom.binary.BufferReader = require('./lib/binary/reader');
-bytom.binary.BufferWriter = require('./lib/binary/writer');
-bytom.binary.Varint = require('./lib/binary/varInt');
-
-// main bytom library
-bytom.Block = require('./lib/block');
-bytom.BlockHeader = require('./lib/blockheader');
-bytom.BlockCommitment = require('./lib/blockcommitment');
-bytom.Transaction = require('./lib/transaction');
-bytom.bc = require('./lib/bc');
+bytomJs.binary = {};
+bytomJs.binary.BufferReader = require('./lib/binary/reader');
+bytomJs.binary.BufferWriter = require('./lib/binary/writer');
+bytomJs.binary.Varint = require('./lib/binary/varInt');
 
 // dependencies, subject to change
-bytom.deps = {};
-bytom.deps.BN = require('bn.js');
-bytom.deps.Buffer = Buffer;
-bytom.deps._ = require('lodash');
+bytomJs.deps = {};
+bytomJs.deps.BN = require('bn.js');
+bytomJs.deps.Buffer = Buffer;
+bytomJs.deps._ = require('lodash');

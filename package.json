@@ -1,9 +1,10 @@
 {
   "name": "bytomjs-lib",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "bytom client libraries for Javascript",
   "scripts": {
-    "test": "mocha",
+    "test-bytom": "mocha bytom/test",
+    "test-vapor": "mocha vapor/test",
     "only-test": "mocha --inspect-brk test",
     "build": "browserify  --require ./index.js:bytomjs-lib -o bytomjs-lib.js"
   },
@@ -14,6 +15,7 @@
     "tape": "~2.12.3"
   },
   "dependencies": {
+    "bech32": "^1.1.4",
     "bn.js": "^5.0.0",
     "int64-buffer": "^0.99.1007",
     "js-sha3": "^0.8.0",
