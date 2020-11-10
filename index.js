@@ -18,6 +18,7 @@ global._bytomJs = bytomJs.version;
 
 bytomJs.bytom = require('./bytom');
 bytomJs.vapor = require('./vapor');
+bytomJs.key = require('./key/lib')
 // binary
 bytomJs.binary = {};
 bytomJs.binary.BufferReader = require('./lib/binary/reader');
